@@ -20,3 +20,6 @@ branches:
 addons:
   artifacts: true
   s3_region: "us-west-2"
+  paths:
+    - application.py
+
