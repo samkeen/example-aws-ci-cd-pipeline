@@ -8,6 +8,15 @@ install:
 # command to run tests
 script: py.test
 
+#
+# Then repo is configured on Travis CI to build pull requests and Branches
+# As for branches though, we only want Master to build (after a merge of a PR)
+#
 branches:
   only:
     - master
+
+#if !TRAVIS_PULL_REQUEST && TRAVIS_BRANCH = 'master'
+addons:
+  artifacts: true
+  s3_region: "us-west-2"
