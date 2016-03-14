@@ -4,4 +4,4 @@ Example(s) of AWS CI/CD Pipelines
 
 Testbed for AWS Codepipline deployments
 
-Integration with TravisCI
+Integration of TravisCI and AWS Codepipeline
