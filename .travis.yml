@@ -17,8 +17,8 @@ branches:
     - master
 
 
-before_deploy:
-  script: rm -rf tests
+after_success:
+  script: ./scripts/package-artifact.sh
 
 deploy:
   provider: s3
