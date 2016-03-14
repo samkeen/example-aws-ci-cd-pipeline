@@ -17,9 +17,6 @@ branches:
     - master
 
 
-before_deploy:
-  script: ./package-artifact.sh
-
 deploy:
   provider: s3
   access_key_id: $ARTIFACTS_KEY
