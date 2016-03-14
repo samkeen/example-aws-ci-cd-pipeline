@@ -18,7 +18,8 @@ branches:
 
 
 after_success:
-  script: rm -rf tests
+  script: 
+    - rm -rf tests
 
 deploy:
   provider: s3
