@@ -17,12 +17,12 @@ branches:
     - master
 
 
-#if !TRAVIS_PULL_REQUEST && TRAVIS_BRANCH = 'master'
+before_deploy:
+  script: ./package-artifact.sh
+
 deploy:
   provider: s3
   access_key_id: $ARTIFACTS_KEY
   secret_access_key: $ARTIFACTS_SECRET
   bucket: $ARTIFACTS_BUCKET
   skip_cleanup: true
-  paths:
-    - application.py
