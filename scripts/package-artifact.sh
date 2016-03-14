@@ -1,4 +1,4 @@
 #!/bin/bash
 set -ev
 
-rm -rf tests
+rm -rf ../tests
