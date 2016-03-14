@@ -18,7 +18,7 @@ branches:
 
 
 before_deploy:
-  script: package-artifact.sh
+  script: ./scripts/package-artifact.sh
 
 deploy:
   provider: s3
