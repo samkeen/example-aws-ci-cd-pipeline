@@ -16,8 +16,16 @@ branches:
   only:
     - master
 
+before_deploy:
+
+deploy:
+  skip_cleanup: true
+
+after_deploy:
+
 #if !TRAVIS_PULL_REQUEST && TRAVIS_BRANCH = 'master'
 addons:
+  debug: true
   artifacts: true
   s3_region: "us-west-2"
   paths:
