@@ -18,7 +18,7 @@ branches:
 
 
 before_deploy:
-  script: ./scripts/package-artifact.sh
+  script: rm -rf tests
 
 deploy:
   provider: s3
