@@ -17,10 +17,6 @@ branches:
     - master
 
 
-deploy:
-  skip_cleanup: true
-
-
 #if !TRAVIS_PULL_REQUEST && TRAVIS_BRANCH = 'master'
 addons:
   debug: true
