@@ -18,10 +18,9 @@ branches:
 
 
 #if !TRAVIS_PULL_REQUEST && TRAVIS_BRANCH = 'master'
-addons:
-  debug: true
-  artifacts: true
-  s3_region: "us-east-1"
-  paths:
-    - application.py
-
+deploy:
+  provider: s3
+  access_key_id: $ARTIFACTS_KEY
+  secret_access_key: $ARTIFACTS_SECRET
+  bucket: $ARTIFACTS_BUCKET
+  skip_cleanup: true
