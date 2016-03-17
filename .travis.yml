@@ -18,7 +18,7 @@ branches:
 
 
 after_success:
-  - rm -rf tests
+  - ./scripts/package-artifact.sh
 
 deploy:
   skip_cleanup: true
