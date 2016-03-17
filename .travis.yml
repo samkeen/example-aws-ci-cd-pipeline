@@ -2,10 +2,8 @@ language: python
 python:
   - "2.7"
 
-# command to install dependencies
 install:
   - pip install -r requirements.txt
-# command to run tests
 script: py.test
 
 #
@@ -16,15 +14,21 @@ branches:
   only:
     - master
 
-
+# run the packaging script after tests but before deploy
 after_success:
   - ./scripts/package-artifact.sh
 
+# define the S3 deploy (https://docs.travis-ci.com/user/deployment/s3)
 deploy:
+  # Set skip_cleanup to true to prevent Travis CI from deleting your build artifacts
   skip_cleanup: true
   provider: s3
+  # define the $ values as Environment Variables
+  # https://docs.travis-ci.com/user/environment-variables/#Defining-Variables-in-Repository-Settings
   access_key_id: $ARTIFACTS_KEY
   secret_access_key: $ARTIFACTS_SECRET
   bucket: $ARTIFACTS_BUCKET
+  # the AWS region our bucket resides in
   region: us-west-2
+  # only upload the build dir
   local_dir: build
