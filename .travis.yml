@@ -26,3 +26,5 @@ deploy:
   access_key_id: $ARTIFACTS_KEY
   secret_access_key: $ARTIFACTS_SECRET
   bucket: $ARTIFACTS_BUCKET
+  region: us-west-2
+  local_dir: build
