@@ -1,0 +1,437 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "The infrastructure required for the Application and Pipeline",
+  "Parameters": {
+    "SshKeyName": {
+      "Description": "Name of an existing EC2 KeyPair to enable SSH access to the instances",
+      "Type": "AWS::EC2::KeyPair::KeyName",
+      "ConstraintDescription": "Must be the name of an existing EC2 KeyPair."
+    },
+    "DeployVPC": {
+      "Description": "Which VPC to deploy to",
+      "Type": "AWS::EC2::VPC::Id"
+    },
+    "PublicSubnets": {
+      "Type": "String",
+      "Description": "A comma-delimited list of public VPC subnets. ELBs will be launched into this subnet."
+    },
+    "PrivateSubnets": {
+      "Type": "String",
+      "Description": "A comma-delimited list of private VPC subnets. Auto Scaling and RDS will be launched into this subnet."
+    },
+    "DemoAppEbServiceRoleName": {
+      "Type": "String",
+      "Default": "DemoAppEbServiceRole",
+      "Description": "The EB IAM service role name (NOT ARN)"
+    },
+    "DemoAppEbNotificationTopic": {
+      "Type": "String",
+      "Default": "arn:aws:sns:----------------------",
+      "Description": "The ARN of the SNS Topic EB will send notifications to"
+    },
+    "NotificationsTopicEmailTarget": {
+      "Type": "String",
+      "Description": "EB utilizes an SNS topic for notifications.  Supply an email address to receive those notifications"
+    },
+    "InstanceType": {
+      "Type": "String",
+      "Default": "t2.micro",
+      "Description": "The instance type to use for app nodes"
+    }
+  },
+  "Metadata": {
+    "documentation": "",
+    "notes0": ""
+  },
+  "Resources": {
+    "PipelineInitialSrcArtifactsS3Bucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "BucketName": {
+          "Fn::Join": [
+            "-",
+            [
+              "DemoApp-codepipeline-artifact-storage",
+              {
+                "Ref": "AWS::Region"
+              }
+            ]
+          ]
+        },
+        "VersioningConfiguration": {
+            "Status": "Enabled"
+        },
+        "Tags": []
+      }
+    },
+    "PipelineInterStageArtifactsS3Bucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "BucketName": {
+          "Fn::Join": [
+            "-",
+            [
+              "DemoApp-codepipeline-interstage-storage",
+              {
+                "Ref": "AWS::Region"
+              }
+            ]
+          ]
+        },
+        "Tags": []
+      }
+    },
+    "DemoAppPipelineServiceRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "codepipeline.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Path": "/"
+      }
+    },
+    "DemoAppPipelineServiceRolePolicies": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "root",
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Action": [
+                "s3:GetObject",
+                "s3:GetObjectVersion",
+                "s3:GetBucketVersioning"
+              ],
+              "Resource": "*",
+              "Effect": "Allow"
+            },
+            {
+              "Action": [
+                "s3:PutObject"
+              ],
+              "Resource": [
+                "arn:aws:s3:::codepipeline*",
+                "arn:aws:s3:::elasticbeanstalk*"
+              ],
+              "Effect": "Allow"
+            },
+            {
+              "Action": [
+                "codedeploy:CreateDeployment",
+                "codedeploy:GetApplicationRevision",
+                "codedeploy:GetDeployment",
+                "codedeploy:GetDeploymentConfig",
+                "codedeploy:RegisterApplicationRevision"
+              ],
+              "Resource": "*",
+              "Effect": "Allow"
+            },
+            {
+              "Action": [
+                "elasticbeanstalk:*",
+                "ec2:*",
+                "elasticloadbalancing:*",
+                "autoscaling:*",
+                "cloudwatch:*",
+                "s3:*",
+                "sns:*",
+                "cloudformation:*",
+                "rds:*",
+                "sqs:*",
+                "ecs:*",
+                "iam:PassRole"
+              ],
+              "Resource": "*",
+              "Effect": "Allow"
+            },
+            {
+              "Action": [
+                "lambda:InvokeFunction",
+                "lambda:ListFunctions"
+              ],
+              "Resource": "*",
+              "Effect": "Allow"
+            }
+          ]
+        },
+        "Roles": [
+          {
+            "Ref": "DemoAppPipelineServiceRole"
+          }
+        ]
+      }
+    },
+    "DemoAppApplication": {
+      "Type": "AWS::ElasticBeanstalk::Application",
+      "Properties": {
+        "ApplicationName": "DemoAppApplication",
+        "Description": "The DemoApp-backend"
+      }
+    },
+    "ApplicationVersion" : {
+      "Type" : "AWS::ElasticBeanstalk::ApplicationVersion",
+      "Properties" : {
+        "Description" : "Version 1.0",
+        "ApplicationName" : { "Ref" : "DemoAppApplication" },
+        "SourceBundle": {
+          "S3Bucket": "demoapp-devops",
+          "S3Key": "eb-deployments/php-eb-stub.zip"
+        }
+      }
+    },
+    "ConfigurationTemplate": {
+      "Type": "AWS::ElasticBeanstalk::ConfigurationTemplate",
+      "Properties": {
+        "ApplicationName": {
+          "Ref": "DemoAppApplication"
+        },
+        "OptionSettings": [
+          {
+            "Namespace": "aws:autoscaling:launchconfiguration",
+            "OptionName": "EC2KeyName",
+            "Value": {
+              "Ref": "SshKeyName"
+            }
+          },
+          {
+            "Namespace": "aws:autoscaling:launchconfiguration",
+            "OptionName": "IamInstanceProfile",
+            "Value": {
+              "Ref": "EbAppInstanceProfile"
+            }
+          },
+          {
+            "Namespace": "aws:autoscaling:launchconfiguration",
+            "OptionName": "InstanceType",
+            "Value": {
+              "Ref": "InstanceType"
+            }
+          },
+          {
+            "Namespace": "aws:autoscaling:trigger",
+            "OptionName": "UpperThreshold",
+            "Value": "6000000"
+          },
+          {
+            "Namespace": "aws:autoscaling:updatepolicy:rollingupdate",
+            "OptionName": "MaxBatchSize",
+            "Value": "1"
+          },
+          {
+            "Namespace": "aws:autoscaling:updatepolicy:rollingupdate",
+            "OptionName": "MinInstancesInService",
+            "Value": "1"
+          },
+          {
+            "Namespace": "aws:autoscaling:updatepolicy:rollingupdate",
+            "OptionName": "RollingUpdateEnabled",
+            "Value": "true"
+          },
+          {
+            "Namespace": "aws:autoscaling:updatepolicy:rollingupdate",
+            "OptionName": "RollingUpdateType",
+            "Value": "Health"
+          },
+          {
+            "Namespace": "aws:ec2:vpc",
+            "OptionName": "VPCId",
+            "Value": {
+              "Ref": "DeployVPC"
+            }
+          },
+          {
+            "Namespace": "aws:ec2:vpc",
+            "OptionName": "Subnets",
+            "Value": {
+              "Ref": "PrivateSubnets"
+            }
+          },
+          {
+            "Namespace": "aws:ec2:vpc",
+            "OptionName": "ELBSubnets",
+            "Value": {
+              "Ref": "PublicSubnets"
+            }
+          },
+          {
+            "Namespace": "aws:elasticbeanstalk:application",
+            "OptionName": "Application Healthcheck URL",
+            "Value": "/"
+          },
+          {
+            "Namespace": "aws:elasticbeanstalk:command",
+            "OptionName": "BatchSize",
+            "Value": "30"
+          },
+          {
+            "Namespace": "aws:elasticbeanstalk:container:php:phpini",
+            "OptionName": "document_root",
+            "Value": "/public"
+          },
+          {
+            "Namespace": "aws:elasticbeanstalk:environment",
+            "OptionName": "ServiceRole",
+            "Value": {
+              "Ref": "DemoAppEbServiceRoleName"
+            }
+          },
+          {
+            "Namespace": "aws:elasticbeanstalk:healthreporting:system",
+            "OptionName": "SystemType",
+            "Value": "enhanced"
+          },
+          {
+            "Namespace": "aws:elasticbeanstalk:hostmanager",
+            "OptionName": "LogPublicationControl",
+            "Value": "true"
+          },
+          {
+            "Namespace": "aws:elasticbeanstalk:sns:topics",
+            "OptionName": "Notification Endpoint",
+            "Value": {
+              "Ref": "NotificationsTopicEmailTarget"
+            }
+          },
+          {
+            "Namespace": "aws:elasticbeanstalk:sns:topics",
+            "OptionName": "Notification Topic ARN",
+            "Value": {
+              "Ref": "DemoAppEbNotificationTopic"
+            }
+          },
+          {
+            "Namespace": "aws:elb:healthcheck",
+            "OptionName": "Interval",
+            "Value": "10"
+          },
+          {
+            "Namespace": "aws:elb:healthcheck",
+            "OptionName": "Target",
+            "Value": "HTTP:80/"
+          },
+          {
+            "Namespace": "aws:elb:loadbalancer",
+            "OptionName": "CrossZone",
+            "Value": "true"
+          },
+          {
+            "Namespace": "aws:elb:loadbalancer",
+            "OptionName": "LoadBalancerHTTPPort",
+            "Value": "80"
+          },
+          {
+            "Namespace": "aws:elb:policies",
+            "OptionName": "ConnectionDrainingEnabled",
+            "Value": "false"
+          }
+        ],
+        "Description": "The configuration template",
+        "SolutionStackName": "64bit Amazon Linux 2015.09 v2.0.8 running PHP 5.6"
+      }
+    },
+    "Environment": {
+      "Type": "AWS::ElasticBeanstalk::Environment",
+      "Properties": {
+        "EnvironmentName": "DemoAppEnv",
+        "ApplicationName": {
+          "Ref": "DemoAppApplication"
+        },
+        "VersionLabel" : { "Ref" : "ApplicationVersion" },
+        "TemplateName": {
+          "Ref": "ConfigurationTemplate"
+        },
+        "Tier": {
+          "Name": "WebServer",
+          "Type": "Standard"
+        },
+        "Description": "The DemoApp EB Environment.  An environment is a version that is deployed onto AWS resources.",
+        "Tags": []
+      }
+    },
+    "EbAppRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "ec2.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Path": "/"
+      }
+    },
+    "RolePolicies": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "EbApp",
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Sid": "AwsResourceAccessForTheAppInstance",
+              "Action": [
+                "s3:Get*",
+                "s3:List*",
+                "s3:PutObject"
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                "arn:aws:s3:::elasticbeanstalk-*",
+                "arn:aws:s3:::elasticbeanstalk-*/*",
+                "arn:aws:s3:::demoapp-devops*",
+                "arn:aws:s3:::demoapp-devops*/*"
+              ]
+            }
+          ]
+        },
+        "Roles": [
+          {
+            "Ref": "EbAppRole"
+          }
+        ]
+      }
+    },
+    "EbAppInstanceProfile": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {
+        "Path": "/",
+        "Roles": [
+          {
+            "Ref": "EbAppRole"
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {
+    "PipelineInitialSrcArtifactsS3Bucket": {
+      "Value": {
+        "Ref": "PipelineInitialSrcArtifactsS3Bucket"
+      }
+    },
+    "PipelineInterStageArtifactsS3Bucket": {
+      "Value": {
+        "Ref": "PipelineInterStageArtifactsS3Bucket"
+      }
+    }
+
+  }
+}
