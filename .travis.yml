@@ -19,6 +19,9 @@ after_success:
 #  - ./scripts/package-artifact.sh
   - pip install awscli
   - AWS_ACCESS_KEY_ID=$ARTIFACTS_KEY AWS_SECRET_ACCESS_KEY=$ARTIFACTS_SECRET aws s3 ls
+  - echo "TRAVIS_BRANCH: ${TRAVIS_BRANCH}, TRAVIS_COMMIT: ${TRAVIS_COMMIT}, TRAVIS_COMMIT_RANGE: ${TRAVIS_COMMIT_RANGE}"
+  - echo "TRAVIS_JOB_ID: ${TRAVIS_JOB_ID}, TRAVIS_JOB_NUMBER: ${TRAVIS_JOB_NUMBER}, TRAVIS_PULL_REQUEST: ${TRAVIS_PULL_REQUEST}"
+  - echo "TRAVIS_REPO_SLUG: ${TRAVIS_REPO_SLUG}, TRAVIS_TAG: ${TRAVIS_TAG}, TRAVIS_PYTHON_VERSION: ${TRAVIS_PYTHON_VERSION}"
 
 # define the S3 deploy (https://docs.travis-ci.com/user/deployment/s3)
 deploy:
