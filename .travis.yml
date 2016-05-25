@@ -16,7 +16,11 @@ branches:
 
 # run the packaging script after tests but before deploy
 after_success:
+  - ./scripts/digest.sh
   - ./scripts/package-artifact.sh
+# test aws cli
+  - pip install awscli
+  - AWS_ACCESS_KEY_ID=$ARTIFACTS_KEY AWS_SECRET_ACCESS_KEY=$ARTIFACTS_SECRET aws s3 ls
 
 # define the S3 deploy (https://docs.travis-ci.com/user/deployment/s3)
 deploy:
