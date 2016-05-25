@@ -17,6 +17,7 @@ branches:
 # run the packaging script after tests but before deploy
 after_success:
   - ./scripts/package-artifact.sh
+  - pip install boto3
 
 # define the S3 deploy (https://docs.travis-ci.com/user/deployment/s3)
 deploy:
